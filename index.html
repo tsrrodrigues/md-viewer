@@ -323,21 +323,34 @@
       return await resp.text();
     }
 
-    // 3. Telegram Mini App: start_param contains a gist ID
+    // 3. Telegram Mini App: start_param contains a gist ID or content ref
     async function getContentFromStartParam() {
       const tg = window.Telegram?.WebApp;
-      const startParam = tg?.initDataUnsafe?.start_param;
+      // Try multiple sources for start_param
+      const startParam = tg?.initDataUnsafe?.start_param
+        || new URLSearchParams(window.location.search).get('startapp')
+        || new URLSearchParams(window.location.hash?.substring(1)).get('tgWebAppStartParam');
       if (!startParam) return null;
 
-      // start_param format: gist ID (hex string) or base64url-encoded short content
-      // Try as gist ID first (32 hex chars)
-      if (/^[a-f0-9]{20,}$/i.test(startParam)) {
-        const rawUrl = `https://gist.githubusercontent.com/raw/${startParam}/content.md`;
-        const resp = await fetch(rawUrl);
-        if (resp.ok) return await resp.text();
+      console.log('[viewer] start_param:', startParam);
+
+      // Try as gist ID (hex string, typically 32 chars)
+      if (/^[a-f0-9]{16,}$/i.test(startParam)) {
+        const urls = [
+          `https://gist.githubusercontent.com/raw/${startParam}/content.md`,
+          `https://gist.githubusercontent.com/tsrrodrigues/${startParam}/raw/content.md`
+        ];
+        for (const rawUrl of urls) {
+          try {
+            const resp = await fetch(rawUrl);
+            if (resp.ok) return await resp.text();
+          } catch (e) {
+            console.warn('[viewer] fetch failed:', rawUrl, e);
+          }
+        }
       }
 
-      // Try as base64url-encoded content
+      // Try as base64url-encoded content (short content)
       try {
         const b64 = startParam.replace(/-/g, '+').replace(/_/g, '/');
         const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
