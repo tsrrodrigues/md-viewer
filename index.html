@@ -83,32 +83,15 @@
     #content h5 { font-size: 0.875em; }
     #content h6 { font-size: 0.85em; color: var(--text-secondary); }
 
-    #content p {
-      margin-bottom: 16px;
-    }
+    #content p { margin-bottom: 16px; }
 
-    #content a {
-      color: var(--link);
-      text-decoration: none;
-    }
-
-    #content a:hover {
-      text-decoration: underline;
-    }
+    #content a { color: var(--link); text-decoration: none; }
+    #content a:hover { text-decoration: underline; }
 
     /* Lists */
-    #content ul, #content ol {
-      margin-bottom: 16px;
-      padding-left: 2em;
-    }
-
-    #content li {
-      margin-bottom: 4px;
-    }
-
-    #content li > ul, #content li > ol {
-      margin-bottom: 0;
-    }
+    #content ul, #content ol { margin-bottom: 16px; padding-left: 2em; }
+    #content li { margin-bottom: 4px; }
+    #content li > ul, #content li > ol { margin-bottom: 0; }
 
     /* Code */
     #content code {
@@ -138,9 +121,7 @@
     }
 
     /* Copy button for code blocks */
-    .code-wrapper {
-      position: relative;
-    }
+    .code-wrapper { position: relative; }
 
     .copy-btn {
       position: absolute;
@@ -157,14 +138,8 @@
       color: var(--text);
     }
 
-    .code-wrapper:hover .copy-btn {
-      opacity: 1;
-    }
-
-    .copy-btn.copied {
-      background: #28a745;
-      color: white;
-    }
+    .code-wrapper:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { background: #28a745; color: white; }
 
     /* Blockquote */
     #content blockquote {
@@ -173,10 +148,7 @@
       color: var(--blockquote-text);
       border-left: 4px solid var(--blockquote-border);
     }
-
-    #content blockquote > :last-child {
-      margin-bottom: 0;
-    }
+    #content blockquote > :last-child { margin-bottom: 0; }
 
     /* Tables */
     #content table {
@@ -194,14 +166,8 @@
       text-align: left;
     }
 
-    #content th {
-      font-weight: 600;
-      background: var(--table-stripe);
-    }
-
-    #content tr:nth-child(even) {
-      background: var(--table-stripe);
-    }
+    #content th { font-weight: 600; background: var(--table-stripe); }
+    #content tr:nth-child(even) { background: var(--table-stripe); }
 
     /* HR */
     #content hr {
@@ -213,11 +179,7 @@
     }
 
     /* Images */
-    #content img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 8px;
-    }
+    #content img { max-width: 100%; height: auto; border-radius: 8px; }
 
     /* Kbd */
     #content kbd {
@@ -231,9 +193,7 @@
     }
 
     /* Checkbox */
-    #content input[type="checkbox"] {
-      margin-right: 6px;
-    }
+    #content input[type="checkbox"] { margin-right: 6px; }
 
     /* Loading */
     .loading {
@@ -255,9 +215,7 @@
       margin-right: 12px;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Error */
     .error {
@@ -265,11 +223,7 @@
       padding: 40px 20px;
       color: var(--text-secondary);
     }
-
-    .error h2 {
-      margin-bottom: 8px;
-      color: #e74c3c;
-    }
+    .error h2 { margin-bottom: 8px; color: #e74c3c; }
   </style>
 </head>
 <body>
@@ -281,19 +235,31 @@
   </div>
 
   <script>
-    // Theme detection
+    // Theme detection - integrates with Telegram Mini App theme
     function applyTheme() {
       const tg = window.Telegram?.WebApp;
+      let theme = 'light';
+
       if (tg && tg.colorScheme) {
-        document.documentElement.setAttribute('data-theme', tg.colorScheme);
-        // Update highlight.js theme
-        const hljsLink = document.getElementById('hljs-theme');
-        hljsLink.href = tg.colorScheme === 'dark'
-          ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
-          : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css';
+        theme = tg.colorScheme;
       } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.setAttribute('data-theme', 'dark');
+        theme = 'dark';
       }
+
+      document.documentElement.setAttribute('data-theme', theme);
+
+      // Apply Telegram theme colors if available
+      if (tg?.themeParams) {
+        const tp = tg.themeParams;
+        if (tp.bg_color) document.body.style.background = tp.bg_color;
+        if (tp.text_color) document.body.style.color = tp.text_color;
+      }
+
+      // Update highlight.js theme
+      const hljsLink = document.getElementById('hljs-theme');
+      hljsLink.href = theme === 'dark'
+        ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
+        : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css';
     }
 
     // Configure marked
@@ -334,22 +300,20 @@
       });
     }
 
-    // Decode content from URL hash (base64)
+    // --- Content Sources ---
+
+    // 1. URL hash: base64-encoded content
     function getContentFromHash() {
       const hash = window.location.hash.substring(1);
       if (!hash) return null;
       try {
         return decodeURIComponent(escape(atob(hash)));
       } catch {
-        try {
-          return atob(hash);
-        } catch {
-          return null;
-        }
+        try { return atob(hash); } catch { return null; }
       }
     }
 
-    // Fetch content from URL parameter
+    // 2. URL parameter: fetch from external URL
     async function getContentFromUrl() {
       const params = new URLSearchParams(window.location.search);
       const url = params.get('url');
@@ -359,17 +323,28 @@
       return await resp.text();
     }
 
-    // Get content from startapp parameter (Telegram Mini App)
-    function getContentFromStartApp() {
+    // 3. Telegram Mini App: start_param contains a gist ID
+    async function getContentFromStartParam() {
       const tg = window.Telegram?.WebApp;
-      if (tg && tg.initDataUnsafe?.start_param) {
-        try {
-          return decodeURIComponent(escape(atob(tg.initDataUnsafe.start_param)));
-        } catch {
-          return null;
-        }
+      const startParam = tg?.initDataUnsafe?.start_param;
+      if (!startParam) return null;
+
+      // start_param format: gist ID (hex string) or base64url-encoded short content
+      // Try as gist ID first (32 hex chars)
+      if (/^[a-f0-9]{20,}$/i.test(startParam)) {
+        const rawUrl = `https://gist.githubusercontent.com/raw/${startParam}/content.md`;
+        const resp = await fetch(rawUrl);
+        if (resp.ok) return await resp.text();
       }
-      return null;
+
+      // Try as base64url-encoded content
+      try {
+        const b64 = startParam.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = b64 + '='.repeat((4 - b64.length % 4) % 4);
+        return decodeURIComponent(escape(atob(padded)));
+      } catch {
+        return null;
+      }
     }
 
     // Render
@@ -378,7 +353,12 @@
       applyTheme();
 
       try {
-        let md = getContentFromHash() || getContentFromStartApp();
+        // Try content sources in order
+        let md = getContentFromHash();
+
+        if (!md) {
+          md = await getContentFromStartParam();
+        }
 
         if (!md) {
           md = await getContentFromUrl();
@@ -392,7 +372,7 @@
         el.innerHTML = marked.parse(md);
         addCopyButtons();
 
-        // Telegram WebApp ready
+        // Telegram WebApp ready signal
         const tg = window.Telegram?.WebApp;
         if (tg) {
           tg.ready();
@@ -405,7 +385,7 @@
 
     render();
 
-    // Listen for theme changes
+    // Listen for theme changes from Telegram
     window.Telegram?.WebApp?.onEvent('themeChanged', applyTheme);
   </script>
 </body>
